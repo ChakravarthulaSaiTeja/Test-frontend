@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,17 +21,17 @@ import Link from "next/link";
 import ZoomableChartWithVolume from "@/components/ZoomableChartWithVolume";
 
 export default function Home() {
-  const { data: session, status } = useSession();
+  const { isLoggedIn, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "authenticated" && session) {
+    if (!loading && isLoggedIn) {
       router.push("/dashboard");
     }
-  }, [status, session, router]);
+  }, [isLoggedIn, loading, router]);
 
   // Show loading state while checking authentication
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -43,7 +43,7 @@ export default function Home() {
   }
 
   // Don't show landing page if authenticated
-  if (session) {
+  if (isLoggedIn) {
     return null;
   }
 
