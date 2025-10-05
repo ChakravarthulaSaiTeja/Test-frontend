@@ -1,114 +1,128 @@
 # Forecaster AI - Frontend
 
-A modern, AI-powered trading platform frontend built with Next.js, React, and TypeScript.
+AI-powered trading intelligence platform with real-time market data, ML predictions, and sentiment analysis.
 
-## Features
-
-- 🤖 AI-powered trading insights and predictions
-- 📊 Real-time market data visualization
-- 💼 Portfolio management dashboard
-- 📈 Technical analysis tools
-- 🔐 Secure authentication
-- 📱 Responsive design
-- 🌙 Dark/Light theme support
-
-## Tech Stack
-
-- **Framework**: Next.js 15.5.2
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: Radix UI
-- **Charts**: Chart.js, Recharts
-- **Authentication**: NextAuth.js
-- **Deployment**: Netlify
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
 - Node.js 18+ 
 - npm or yarn
+- Neon database account
 
 ### Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/test-frontend.git
-cd test-frontend
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ChakravarthulaSaiTeja/Test-frontend.git
+   cd Test-frontend
+   ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-3. Set up environment variables:
-```bash
-cp env.netlify .env.local
-# Edit .env.local with your actual API keys
-```
+3. **Set up environment variables**
+   
+   **For Local Development:**
+   Create a `.env.local` file in the root directory:
+   ```bash
+   NETLIFY_DATABASE_URL=postgresql://neondb_owner:npg_t36WmiQESfgH@ep-rough-haze-ae5v3f08-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+   ```
+   
+   **For Netlify Deployment:**
+   Add the environment variable in your Netlify site settings:
+   - Key: `NETLIFY_DATABASE_URL`
+   - Value: Your Neon database connection string
 
-4. Run the development server:
-```bash
-npm run dev
-```
+4. **Initialize database**
+   ```bash
+   npm run init-db
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+5. **Test database connection**
+   ```bash
+   npm run test-db
+   ```
 
-## Environment Variables
+6. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-Create a `.env.local` file with the following variables:
+## 🔧 Available Scripts
 
-```env
-# OpenRouter Configuration (Alternative to OpenAI)
-NEXT_PUBLIC_OPENROUTER_API_KEY=your_openrouter_api_key_here
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run init-db` - Initialize database tables
+- `npm run test-db` - Test database connection
 
-# Market Data APIs
-NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY=your_alpha_vantage_api_key_here
-NEXT_PUBLIC_NEWSAPI_KEY=your_newsapi_key_here
+## 🗄️ Database Setup
 
-# Backend API
-NEXT_PUBLIC_BACKEND_URL=https://your-backend-api.com
+This project uses Neon database for authentication and user management.
 
-# App Configuration
-NEXT_PUBLIC_APP_NAME=Forecaster AI
-NEXT_PUBLIC_APP_URL=https://your-netlify-app.netlify.app
+### Database Schema
+- **users**: Stores user accounts with secure password hashing
+- **sessions**: Manages user sessions with expiration
 
-# NextAuth Configuration
-NEXTAUTH_URL=https://your-netlify-app.netlify.app
-NEXTAUTH_SECRET=your_nextauth_secret_here
-```
+### Environment Variables
+- `NETLIFY_DATABASE_URL`: Neon database connection string
+- `DATABASE_URL`: Alternative database URL variable
 
-## Deployment
+## 🚀 Deployment
 
-This project is configured for deployment on Netlify:
-
+### Netlify Deployment
 1. Connect your GitHub repository to Netlify
-2. Set the environment variables in Netlify dashboard
-3. Deploy your backend API separately (Railway, Heroku, AWS)
-4. Update `NEXT_PUBLIC_BACKEND_URL` with your deployed backend URL
+2. Add environment variable `NETLIFY_DATABASE_URL`
+3. Deploy automatically on push to main branch
 
-## Project Structure
+### Environment Variables for Production
+Make sure to set these in your Netlify site settings:
+- `NETLIFY_DATABASE_URL`: Your Neon database connection string
+
+## 🔐 Authentication
+
+The application uses a secure authentication system with:
+- Password hashing with bcryptjs
+- Session management with expiration
+- Database-backed user storage
+- Client-side localStorage for persistence
+
+## 📁 Project Structure
 
 ```
 src/
 ├── app/                 # Next.js app router pages
-├── components/          # Reusable React components
-│   ├── ui/             # Base UI components
-│   ├── charts/         # Chart components
-│   └── trading/        # Trading-specific components
-├── contexts/           # React contexts
-├── lib/                # Utility functions and configurations
-└── types/              # TypeScript type definitions
+├── components/          # React components
+├── contexts/           # React contexts (Auth)
+├── lib/                # Utility functions and services
+│   ├── auth.ts         # Client-side authentication
+│   ├── auth-service.ts # Database authentication service
+│   ├── database.ts     # Database initialization
+│   └── types.ts        # Shared TypeScript types
+└── styles/             # CSS styles
 ```
 
-## Contributing
+## 🛠️ Troubleshooting
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+### Database Connection Issues
+1. Verify your `NETLIFY_DATABASE_URL` is correct
+2. Check if your Neon database is active
+3. Ensure your IP is whitelisted (if required)
+4. Run `npm run test-db` to test connection
 
-## License
+### Build Issues
+1. Make sure all dependencies are installed: `npm install`
+2. Check TypeScript errors: `npm run lint`
+3. Verify environment variables are set
+
+### Authentication Issues
+1. Ensure database tables are created: `npm run init-db`
+2. Check browser console for errors
+3. Verify environment variables are configured
+
+## 📝 License
 
 This project is licensed under the MIT License.
