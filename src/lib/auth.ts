@@ -37,6 +37,17 @@ const DEMO_USERS = [
 
 export async function login(email: string, password: string): Promise<AuthResult<User>> {
   try {
+    // Check if we're on client side
+    if (typeof window === 'undefined') {
+      return {
+        success: false,
+        error: {
+          message: 'Authentication not available on server side',
+          code: 'SERVER_SIDE_ERROR',
+        },
+      };
+    }
+
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -63,12 +74,13 @@ export async function login(email: string, password: string): Promise<AuthResult
     
     localStorage.setItem('forecaster_user', JSON.stringify(userData));
     localStorage.setItem('forecaster_token', 'demo_token_' + Date.now());
-
+    
     return {
       success: true,
       data: userData,
     };
   } catch (error) {
+    console.error('Login error:', error);
     return {
       success: false,
       error: {
@@ -133,6 +145,13 @@ export async function signup(email: string, password: string, username: string, 
 
 export async function logout(): Promise<AuthResult<void>> {
   try {
+    // Check if we're on client side
+    if (typeof window === 'undefined') {
+      return {
+        success: true,
+      };
+    }
+
     // Clear localStorage
     localStorage.removeItem('forecaster_user');
     localStorage.removeItem('forecaster_token');
@@ -141,6 +160,7 @@ export async function logout(): Promise<AuthResult<void>> {
       success: true,
     };
   } catch (error) {
+    console.error('Logout error:', error);
     return {
       success: false,
       error: {
@@ -153,6 +173,17 @@ export async function logout(): Promise<AuthResult<void>> {
 
 export async function getCurrentUser(): Promise<AuthResult<User>> {
   try {
+    // Check if we're on client side
+    if (typeof window === 'undefined') {
+      return {
+        success: false,
+        error: {
+          message: 'No user session found',
+          code: 'NO_SESSION',
+        },
+      };
+    }
+
     // Get user from localStorage
     const userStr = localStorage.getItem('forecaster_user');
     const token = localStorage.getItem('forecaster_token');
@@ -173,6 +204,7 @@ export async function getCurrentUser(): Promise<AuthResult<User>> {
       data: user,
     };
   } catch (error) {
+    console.error('getCurrentUser error:', error);
     return {
       success: false,
       error: {
