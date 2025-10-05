@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Database initialization script for Neon
 
-import { initializeDatabase } from './src/lib/database.js';
+import { initializeDatabase } from '../src/lib/database.ts';
 
 async function main() {
   try {

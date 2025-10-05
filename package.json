@@ -8,8 +8,8 @@
     "build:netlify": "next build && next export",
     "start": "next start",
     "lint": "eslint",
-    "init-db": "node scripts/init-db.js",
-    "test-db": "node scripts/test-db-connection.js"
+    "init-db": "npx tsx scripts/init-db.js",
+    "test-db": "npx tsx scripts/test-db-connection.js"
   },
   "dependencies": {
     "@netlify/neon": "^0.1.0",
