@@ -2,6 +2,10 @@
 // Database initialization script for Neon
 
 import { initializeDatabase } from '../src/lib/database.ts';
+import { config } from 'dotenv';
+
+// Load environment variables from .env.local
+config({ path: '.env.local' });
 
 async function main() {
   try {

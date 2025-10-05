@@ -2,6 +2,10 @@
 // Test Neon database connection
 
 import { neon } from '@netlify/neon';
+import { config } from 'dotenv';
+
+// Load environment variables from .env.local
+config({ path: '.env.local' });
 
 async function testConnection() {
   try {
