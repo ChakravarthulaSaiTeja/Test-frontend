@@ -1,0 +1,17 @@
+# Netlify redirects file for SPA routing
+# This ensures all routes are handled by the client-side router
+
+# API routes (if using Netlify Functions)
+/api/*  /api/:splat  200
+
+# Auth routes
+/auth/*  /auth/:splat  200
+
+# Dashboard routes
+/dashboard/*  /dashboard/:splat  200
+
+# Chat route
+/chat  /chat  200
+
+# Catch all other routes and serve index.html
+/*  /index.html  200
