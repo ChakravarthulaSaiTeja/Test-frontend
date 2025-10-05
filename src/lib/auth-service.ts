@@ -1,5 +1,6 @@
 import { neon } from '@netlify/neon';
 import bcrypt from 'bcryptjs';
+import { DatabaseUser, AuthResult } from './types';
 
 // Initialize Neon database connection only when needed
 const getSql = () => {
@@ -9,24 +10,6 @@ const getSql = () => {
   }
   return neon(databaseUrl);
 };
-
-interface User {
-  id: number;
-  email: string;
-  username: string;
-  full_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface AuthResult<T> {
-  success: boolean;
-  data?: T;
-  error?: {
-    message: string;
-    code: string;
-  };
-}
 
 // Hash password
 const hashPassword = async (password: string): Promise<string> => {
@@ -45,7 +28,7 @@ const generateToken = (): string => {
 };
 
 // Create user in database
-export async function createUser(email: string, password: string, username: string, fullName: string): Promise<AuthResult<User>> {
+export async function createUser(email: string, password: string, username: string, fullName: string): Promise<AuthResult<DatabaseUser>> {
   try {
     const sql = getSql();
     
@@ -76,7 +59,7 @@ export async function createUser(email: string, password: string, username: stri
 
     return {
       success: true,
-      data: newUser[0],
+      data: newUser[0] as DatabaseUser,
     };
   } catch (error) {
     console.error('Create user error:', error);
@@ -91,7 +74,7 @@ export async function createUser(email: string, password: string, username: stri
 }
 
 // Authenticate user
-export async function authenticateUser(email: string, password: string): Promise<AuthResult<User>> {
+export async function authenticateUser(email: string, password: string): Promise<AuthResult<DatabaseUser>> {
   try {
     const sql = getSql();
     
@@ -130,7 +113,7 @@ export async function authenticateUser(email: string, password: string): Promise
 
     return {
       success: true,
-      data: userWithoutPassword,
+      data: userWithoutPassword as DatabaseUser,
     };
   } catch (error) {
     console.error('Authenticate user error:', error);
@@ -173,7 +156,7 @@ export async function createSession(userId: number): Promise<AuthResult<string>>
 }
 
 // Get user by session token
-export async function getUserByToken(token: string): Promise<AuthResult<User>> {
+export async function getUserByToken(token: string): Promise<AuthResult<DatabaseUser>> {
   try {
     const sql = getSql();
     const sessions = await sql`
@@ -195,7 +178,7 @@ export async function getUserByToken(token: string): Promise<AuthResult<User>> {
 
     return {
       success: true,
-      data: sessions[0],
+      data: sessions[0] as DatabaseUser,
     };
   } catch (error) {
     console.error('Get user by token error:', error);

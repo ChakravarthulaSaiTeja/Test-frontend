@@ -2,16 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { login as authLogin, signup as authSignup, logout as authLogout, getCurrentUser, isAuthenticated } from '@/lib/auth';
-
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  fullName: string;
-}
+import { ClientUser } from '@/lib/types';
 
 interface AuthContextType {
-  user: User | null;
+  user: ClientUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, password: string, username: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
@@ -22,7 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ClientUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async () => {

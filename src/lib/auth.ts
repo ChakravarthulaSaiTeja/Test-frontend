@@ -2,24 +2,9 @@
 // Client-side authentication with Neon database
 
 import { createUser, authenticateUser, createSession, getUserByToken, deleteSession } from './auth-service';
+import { ClientUser, AuthResult, convertDbUserToClientUser } from './types';
 
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  fullName: string;
-}
-
-interface AuthResult<T> {
-  success: boolean;
-  data?: T;
-  error?: {
-    message: string;
-    code: string;
-  };
-}
-
-export async function login(email: string, password: string): Promise<AuthResult<User>> {
+export async function login(email: string, password: string): Promise<AuthResult<ClientUser>> {
   try {
     // Check if we're on client side
     if (typeof window === 'undefined') {
@@ -36,7 +21,10 @@ export async function login(email: string, password: string): Promise<AuthResult
     const authResult = await authenticateUser(email, password);
     
     if (!authResult.success || !authResult.data) {
-      return authResult;
+      return {
+        success: false,
+        error: authResult.error,
+      };
     }
 
     // Create session
@@ -52,23 +40,16 @@ export async function login(email: string, password: string): Promise<AuthResult
       };
     }
 
+    // Convert database user to client user
+    const clientUser = convertDbUserToClientUser(authResult.data);
+
     // Store session token in localStorage for client-side persistence
     localStorage.setItem('forecaster_token', sessionResult.data);
-    localStorage.setItem('forecaster_user', JSON.stringify({
-      id: authResult.data.id.toString(),
-      email: authResult.data.email,
-      username: authResult.data.username,
-      fullName: authResult.data.full_name,
-    }));
+    localStorage.setItem('forecaster_user', JSON.stringify(clientUser));
 
     return {
       success: true,
-      data: {
-        id: authResult.data.id.toString(),
-        email: authResult.data.email,
-        username: authResult.data.username,
-        fullName: authResult.data.full_name,
-      },
+      data: clientUser,
     };
   } catch (error) {
     console.error('Login error:', error);
@@ -82,7 +63,7 @@ export async function login(email: string, password: string): Promise<AuthResult
   }
 }
 
-export async function signup(email: string, password: string, username: string, fullName: string): Promise<AuthResult<User>> {
+export async function signup(email: string, password: string, username: string, fullName: string): Promise<AuthResult<ClientUser>> {
   try {
     // Check if we're on client side
     if (typeof window === 'undefined') {
@@ -99,7 +80,10 @@ export async function signup(email: string, password: string, username: string, 
     const createResult = await createUser(email, password, username, fullName);
     
     if (!createResult.success || !createResult.data) {
-      return createResult;
+      return {
+        success: false,
+        error: createResult.error,
+      };
     }
 
     // Create session
@@ -115,23 +99,16 @@ export async function signup(email: string, password: string, username: string, 
       };
     }
 
+    // Convert database user to client user
+    const clientUser = convertDbUserToClientUser(createResult.data);
+
     // Store session token in localStorage for client-side persistence
     localStorage.setItem('forecaster_token', sessionResult.data);
-    localStorage.setItem('forecaster_user', JSON.stringify({
-      id: createResult.data.id.toString(),
-      email: createResult.data.email,
-      username: createResult.data.username,
-      fullName: createResult.data.full_name,
-    }));
+    localStorage.setItem('forecaster_user', JSON.stringify(clientUser));
 
     return {
       success: true,
-      data: {
-        id: createResult.data.id.toString(),
-        email: createResult.data.email,
-        username: createResult.data.username,
-        fullName: createResult.data.full_name,
-      },
+      data: clientUser,
     };
   } catch (error) {
     console.error('Signup error:', error);
@@ -181,7 +158,7 @@ export async function logout(): Promise<AuthResult<void>> {
   }
 }
 
-export async function getCurrentUser(): Promise<AuthResult<User>> {
+export async function getCurrentUser(): Promise<AuthResult<ClientUser>> {
   try {
     // Check if we're on client side
     if (typeof window === 'undefined') {
@@ -214,25 +191,21 @@ export async function getCurrentUser(): Promise<AuthResult<User>> {
       // Clear invalid session
       localStorage.removeItem('forecaster_user');
       localStorage.removeItem('forecaster_token');
-      return userResult;
+      return {
+        success: false,
+        error: userResult.error,
+      };
     }
 
+    // Convert database user to client user
+    const clientUser = convertDbUserToClientUser(userResult.data);
+
     // Update localStorage with fresh user data
-    localStorage.setItem('forecaster_user', JSON.stringify({
-      id: userResult.data.id.toString(),
-      email: userResult.data.email,
-      username: userResult.data.username,
-      fullName: userResult.data.full_name,
-    }));
+    localStorage.setItem('forecaster_user', JSON.stringify(clientUser));
 
     return {
       success: true,
-      data: {
-        id: userResult.data.id.toString(),
-        email: userResult.data.email,
-        username: userResult.data.username,
-        fullName: userResult.data.full_name,
-      },
+      data: clientUser,
     };
   } catch (error) {
     console.error('getCurrentUser error:', error);
