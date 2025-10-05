@@ -1,177 +1,103 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getCurrentUser, logout as authLogout, isAuthenticated } from '@/lib/auth';
 
 interface User {
-  id: number;
+  id: string;
   email: string;
   username: string;
-  full_name: string;
-  firstName?: string;
-  lastName?: string;
-  is_active: boolean;
-  created_at: string;
-  membership_type: string;
-  api_calls_limit: number;
-  portfolio_limit: number;
-  watchlist_limit: number;
-  prediction_limit: number;
-  has_advanced_charts: boolean;
-  has_real_time_data: boolean;
-  has_ai_predictions: boolean;
-  has_portfolio_analytics: boolean;
-  has_custom_alerts: boolean;
+  fullName: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, username: string, password: string, fullName: string) => Promise<boolean>;
-  logout: () => void;
   loading: boolean;
-  token: string | null;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, username: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  isLoggedIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    window.location.href = '/';
+  useEffect(() => {
+    checkAuth();
   }, []);
 
-  const verifyToken = useCallback(async (token: string) => {
+  const checkAuth = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-      } else {
-        // Token is invalid, clear auth data
-        logout();
-      }
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      logout();
-    }
-  }, [logout]);
-
-  useEffect(() => {
-    // Check if user is logged in on app load
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-        // Verify token is still valid
-        verifyToken(storedToken);
-      } catch (error) {
-        console.error('Error parsing stored auth data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
-    setLoading(false);
-  }, [verifyToken]);
-
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const formData = new FormData();
-      formData.append('username', email);
-      formData.append('password', password);
-
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const { access_token } = await response.json();
-        setToken(access_token);
-        localStorage.setItem('token', access_token);
-        
-        // Get user data
-        const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${access_token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-          return true;
+      if (isAuthenticated()) {
+        const result = await getCurrentUser();
+        if (result.success && result.data) {
+          setUser(result.data);
+        } else {
+          // Clear invalid session
+          await authLogout();
         }
       }
-      return false;
     } catch (error) {
-      console.error('Login failed:', error);
-      return false;
+      console.error('Auth check failed:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const register = async (email: string, username: string, password: string, fullName: string): Promise<boolean> => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          username,
-          password,
-          full_name: fullName,
-        }),
-      });
-
-      if (response.ok) {
-        // Auto-login after registration
-        return await login(email, password);
+      const { login: authLogin } = await import('@/lib/auth');
+      const result = await authLogin(email, password);
+      
+      if (result.success && result.data) {
+        setUser(result.data);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error?.message || 'Login failed' };
       }
-      return false;
     } catch (error) {
-      console.error('Registration failed:', error);
-      return false;
+      return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    login,
-    register,
-    logout,
-    loading,
-    token,
+  const signup = async (email: string, password: string, username: string, fullName: string) => {
+    try {
+      const { signup: authSignup } = await import('@/lib/auth');
+      const result = await authSignup(email, password, username, fullName);
+      
+      if (result.success && result.data) {
+        setUser(result.data);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error?.message || 'Signup failed' };
+      }
+    } catch (error) {
+      return { success: false, error: 'An unexpected error occurred' };
+    }
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const logout = async () => {
+    try {
+      await authLogout();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    loading,
+    login,
+    signup,
+    logout,
+    isLoggedIn: !!user,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

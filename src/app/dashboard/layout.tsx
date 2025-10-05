@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/trading/Header";
 import Sidebar from "@/components/trading/Sidebar";
 import ResizableChat from "@/components/ResizableChat";
@@ -13,17 +13,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session, status } = useSession();
+  const { isLoggedIn, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!loading && !isLoggedIn) {
       router.push("/auth/signin");
     }
-  }, [status, router]);
+  }, [isLoggedIn, loading, router]);
 
   // Show loading state while checking authentication
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -35,7 +35,7 @@ export default function DashboardLayout({
   }
 
   // Redirect if not authenticated
-  if (!session) {
+  if (!isLoggedIn) {
     return null;
   }
 

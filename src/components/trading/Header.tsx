@@ -15,13 +15,16 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Search, Bell, Settings, User, LogOut, Brain, CreditCard } from "lucide-react";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
-  const { data: session } = useSession();
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => {
-    signOut({ callbackUrl: "/" });
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
   };
 
   return (
@@ -75,9 +78,9 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={session?.user?.image || "/avatars/01.png"} alt={session?.user?.name || "User"} />
+                  <AvatarImage src="/avatars/01.png" alt={user?.fullName || "User"} />
                   <AvatarFallback>
-                    {session?.user?.name ? session.user.name.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
+                    {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -86,10 +89,10 @@ export default function Header() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {session?.user?.name || "Guest User"}
+                    {user?.fullName || "Guest User"}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {session?.user?.email || "guest@example.com"}
+                    {user?.email || "guest@example.com"}
                   </p>
                 </div>
               </DropdownMenuLabel>

@@ -1,40 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Auth utility functions
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-interface SignupRequest {
-  email: string;
-  username: string;
-  password: string;
-  fullName: string;
-}
-
-interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  user: any;
-}
-
-interface SignupResponse {
-  access_token: string;
-  refresh_token: string;
-  user: any;
-}
-
-interface RefreshResponse {
-  access_token: string;
-  refresh_token: string;
-}
+// Client-side authentication for static export
 
 interface User {
-  id: number;
+  id: string;
   email: string;
   username: string;
-  full_name: string;
+  fullName: string;
 }
 
 interface AuthResult<T> {
@@ -46,31 +17,56 @@ interface AuthResult<T> {
   };
 }
 
-export async function login(credentials: LoginRequest): Promise<AuthResult<LoginResponse>> {
+// Demo users for static export
+const DEMO_USERS = [
+  {
+    id: '1',
+    email: 'test@example.com',
+    password: 'password',
+    username: 'testuser',
+    fullName: 'Test User'
+  },
+  {
+    id: '2',
+    email: 'demo@forecaster.ai',
+    password: 'demo123',
+    username: 'demo',
+    fullName: 'Demo User'
+  }
+];
+
+export async function login(email: string, password: string): Promise<AuthResult<User>> {
   try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Find user in demo users
+    const user = DEMO_USERS.find(u => u.email === email && u.password === password);
+    
+    if (!user) {
       return {
         success: false,
         error: {
-          message: data.detail || 'Login failed',
-          code: response.status.toString(),
+          message: 'Invalid email or password',
+          code: 'INVALID_CREDENTIALS',
         },
       };
     }
 
+    // Store user in localStorage for persistence
+    const userData = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      fullName: user.fullName
+    };
+    
+    localStorage.setItem('forecaster_user', JSON.stringify(userData));
+    localStorage.setItem('forecaster_token', 'demo_token_' + Date.now());
+
     return {
       success: true,
-      data,
+      data: userData,
     };
   } catch (error) {
     return {
@@ -83,65 +79,46 @@ export async function login(credentials: LoginRequest): Promise<AuthResult<Login
   }
 }
 
-export async function signup(userData: SignupRequest): Promise<AuthResult<SignupResponse>> {
+export async function signup(email: string, password: string, username: string, fullName: string): Promise<AuthResult<User>> {
   try {
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Check if user already exists
+    const existingUser = DEMO_USERS.find(u => u.email === email);
+    if (existingUser) {
       return {
         success: false,
         error: {
-          message: data.detail || 'Signup failed',
-          code: response.status.toString(),
+          message: 'User already exists',
+          code: 'USER_EXISTS',
         },
       };
     }
 
-    return {
-      success: true,
-      data,
+    // Create new user
+    const newUser = {
+      id: Date.now().toString(),
+      email,
+      password,
+      username,
+      fullName
     };
-  } catch (error) {
-    return {
-      success: false,
-      error: {
-        message: error instanceof Error ? error.message : 'Network error',
-        code: 'NETWORK_ERROR',
-      },
+
+    // Store user in localStorage for persistence
+    const userData = {
+      id: newUser.id,
+      email: newUser.email,
+      username: newUser.username,
+      fullName: newUser.fullName
     };
-  }
-}
-
-export async function refresh(): Promise<AuthResult<RefreshResponse>> {
-  try {
-    const response = await fetch('/api/auth/refresh', {
-      method: 'POST',
-      credentials: 'include',
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: {
-          message: data.detail || 'Token refresh failed',
-          code: response.status.toString(),
-        },
-      };
-    }
+    
+    localStorage.setItem('forecaster_user', JSON.stringify(userData));
+    localStorage.setItem('forecaster_token', 'demo_token_' + Date.now());
 
     return {
       success: true,
-      data,
+      data: userData,
     };
   } catch (error) {
     return {
@@ -156,21 +133,10 @@ export async function refresh(): Promise<AuthResult<RefreshResponse>> {
 
 export async function logout(): Promise<AuthResult<void>> {
   try {
-    const response = await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: {
-          message: 'Logout failed',
-          code: response.status.toString(),
-        },
-      };
-    }
-
+    // Clear localStorage
+    localStorage.removeItem('forecaster_user');
+    localStorage.removeItem('forecaster_token');
+    
     return {
       success: true,
     };
@@ -187,24 +153,24 @@ export async function logout(): Promise<AuthResult<void>> {
 
 export async function getCurrentUser(): Promise<AuthResult<User>> {
   try {
-    const response = await fetch('/api/auth/me', {
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
+    // Get user from localStorage
+    const userStr = localStorage.getItem('forecaster_user');
+    const token = localStorage.getItem('forecaster_token');
+    
+    if (!userStr || !token) {
       return {
         success: false,
         error: {
-          message: 'Failed to get user info',
-          code: response.status.toString(),
+          message: 'No user session found',
+          code: 'NO_SESSION',
         },
       };
     }
 
-    const data = await response.json();
+    const user = JSON.parse(userStr);
     return {
       success: true,
-      data: data.user,
+      data: user,
     };
   } catch (error) {
     return {
@@ -215,6 +181,11 @@ export async function getCurrentUser(): Promise<AuthResult<User>> {
       },
     };
   }
+}
+
+export function isAuthenticated(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!(localStorage.getItem('forecaster_user') && localStorage.getItem('forecaster_token'));
 }
 
 export function validatePassword(password: string): { isValid: boolean; errors: string[] } {
