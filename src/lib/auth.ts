@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Client-side authentication for static export
+// Client-side authentication with Neon database
+
+import { createUser, authenticateUser, createSession, getUserByToken, deleteSession } from './auth-service';
 
 interface User {
   id: string;
@@ -17,24 +19,6 @@ interface AuthResult<T> {
   };
 }
 
-// Demo users for static export
-const DEMO_USERS = [
-  {
-    id: '1',
-    email: 'test@example.com',
-    password: 'password',
-    username: 'testuser',
-    fullName: 'Test User'
-  },
-  {
-    id: '2',
-    email: 'demo@forecaster.ai',
-    password: 'demo123',
-    username: 'demo',
-    fullName: 'Demo User'
-  }
-];
-
 export async function login(email: string, password: string): Promise<AuthResult<User>> {
   try {
     // Check if we're on client side
@@ -48,36 +32,43 @@ export async function login(email: string, password: string): Promise<AuthResult
       };
     }
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Authenticate user with database
+    const authResult = await authenticateUser(email, password);
     
-    // Find user in demo users
-    const user = DEMO_USERS.find(u => u.email === email && u.password === password);
+    if (!authResult.success || !authResult.data) {
+      return authResult;
+    }
+
+    // Create session
+    const sessionResult = await createSession(authResult.data.id);
     
-    if (!user) {
+    if (!sessionResult.success || !sessionResult.data) {
       return {
         success: false,
         error: {
-          message: 'Invalid email or password',
-          code: 'INVALID_CREDENTIALS',
+          message: 'Failed to create session',
+          code: 'SESSION_ERROR',
         },
       };
     }
 
-    // Store user in localStorage for persistence
-    const userData = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      fullName: user.fullName
-    };
-    
-    localStorage.setItem('forecaster_user', JSON.stringify(userData));
-    localStorage.setItem('forecaster_token', 'demo_token_' + Date.now());
-    
+    // Store session token in localStorage for client-side persistence
+    localStorage.setItem('forecaster_token', sessionResult.data);
+    localStorage.setItem('forecaster_user', JSON.stringify({
+      id: authResult.data.id.toString(),
+      email: authResult.data.email,
+      username: authResult.data.username,
+      fullName: authResult.data.full_name,
+    }));
+
     return {
       success: true,
-      data: userData,
+      data: {
+        id: authResult.data.id.toString(),
+        email: authResult.data.email,
+        username: authResult.data.username,
+        fullName: authResult.data.full_name,
+      },
     };
   } catch (error) {
     console.error('Login error:', error);
@@ -93,46 +84,57 @@ export async function login(email: string, password: string): Promise<AuthResult
 
 export async function signup(email: string, password: string, username: string, fullName: string): Promise<AuthResult<User>> {
   try {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if user already exists
-    const existingUser = DEMO_USERS.find(u => u.email === email);
-    if (existingUser) {
+    // Check if we're on client side
+    if (typeof window === 'undefined') {
       return {
         success: false,
         error: {
-          message: 'User already exists',
-          code: 'USER_EXISTS',
+          message: 'Authentication not available on server side',
+          code: 'SERVER_SIDE_ERROR',
         },
       };
     }
 
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      email,
-      password,
-      username,
-      fullName
-    };
-
-    // Store user in localStorage for persistence
-    const userData = {
-      id: newUser.id,
-      email: newUser.email,
-      username: newUser.username,
-      fullName: newUser.fullName
-    };
+    // Create user in database
+    const createResult = await createUser(email, password, username, fullName);
     
-    localStorage.setItem('forecaster_user', JSON.stringify(userData));
-    localStorage.setItem('forecaster_token', 'demo_token_' + Date.now());
+    if (!createResult.success || !createResult.data) {
+      return createResult;
+    }
+
+    // Create session
+    const sessionResult = await createSession(createResult.data.id);
+    
+    if (!sessionResult.success || !sessionResult.data) {
+      return {
+        success: false,
+        error: {
+          message: 'Failed to create session',
+          code: 'SESSION_ERROR',
+        },
+      };
+    }
+
+    // Store session token in localStorage for client-side persistence
+    localStorage.setItem('forecaster_token', sessionResult.data);
+    localStorage.setItem('forecaster_user', JSON.stringify({
+      id: createResult.data.id.toString(),
+      email: createResult.data.email,
+      username: createResult.data.username,
+      fullName: createResult.data.full_name,
+    }));
 
     return {
       success: true,
-      data: userData,
+      data: {
+        id: createResult.data.id.toString(),
+        email: createResult.data.email,
+        username: createResult.data.username,
+        fullName: createResult.data.full_name,
+      },
     };
   } catch (error) {
+    console.error('Signup error:', error);
     return {
       success: false,
       error: {
@@ -150,6 +152,14 @@ export async function logout(): Promise<AuthResult<void>> {
       return {
         success: true,
       };
+    }
+
+    // Get token from localStorage
+    const token = localStorage.getItem('forecaster_token');
+    
+    if (token) {
+      // Delete session from database
+      await deleteSession(token);
     }
 
     // Clear localStorage
@@ -184,11 +194,10 @@ export async function getCurrentUser(): Promise<AuthResult<User>> {
       };
     }
 
-    // Get user from localStorage
-    const userStr = localStorage.getItem('forecaster_user');
+    // Get token from localStorage
     const token = localStorage.getItem('forecaster_token');
     
-    if (!userStr || !token) {
+    if (!token) {
       return {
         success: false,
         error: {
@@ -198,10 +207,32 @@ export async function getCurrentUser(): Promise<AuthResult<User>> {
       };
     }
 
-    const user = JSON.parse(userStr);
+    // Get user from database using token
+    const userResult = await getUserByToken(token);
+    
+    if (!userResult.success || !userResult.data) {
+      // Clear invalid session
+      localStorage.removeItem('forecaster_user');
+      localStorage.removeItem('forecaster_token');
+      return userResult;
+    }
+
+    // Update localStorage with fresh user data
+    localStorage.setItem('forecaster_user', JSON.stringify({
+      id: userResult.data.id.toString(),
+      email: userResult.data.email,
+      username: userResult.data.username,
+      fullName: userResult.data.full_name,
+    }));
+
     return {
       success: true,
-      data: user,
+      data: {
+        id: userResult.data.id.toString(),
+        email: userResult.data.email,
+        username: userResult.data.username,
+        fullName: userResult.data.full_name,
+      },
     };
   } catch (error) {
     console.error('getCurrentUser error:', error);
@@ -222,27 +253,11 @@ export function isAuthenticated(): boolean {
 
 export function validatePassword(password: string): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
-
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
-  }
-
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-
-  if (!/\d/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
+  if (password.length < 8) { errors.push('Password must be at least 8 characters long'); }
+  if (!/[A-Z]/.test(password)) { errors.push('Password must contain at least one uppercase letter'); }
+  if (!/[a-z]/.test(password)) { errors.push('Password must contain at least one lowercase letter'); }
+  if (!/\d/.test(password)) { errors.push('Password must contain at least one number'); }
+  return { isValid: errors.length === 0, errors };
 }
 
 export function validateEmail(email: string): boolean {
